@@ -1,0 +1,99 @@
+# Standalone Windows build — produces a downloadable .exe without touching the
+# release pipeline in build.yml (which only uploads Windows artifacts on `v*`
+# tags and routes them through SignPath signing, gated to the upstream repo).
+#
+# This workflow:
+#   * runs only on windows-latest, on demand (Run workflow button) or on `win-*` tags
+#   * needs NO secrets — works on forks
+#   * builds the renderer + Electron main, then packages with electron-forge
+#   * uploads BOTH the Squirrel installer (Setup.exe) and the portable app folder
+#     as run artifacts you can download from the Actions run page
+#
+# The produced binaries are UNSIGNED — Windows SmartScreen will warn on first
+# run; choose "More info" → "Run anyway".
+name: Build Windows (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: Target architecture
+        type: choice
+        options:
+          - x64
+        default: x64
+  # Optional: tag with `win-*` (e.g. `git tag win-test1 && git push --tags`) to
+  # trigger a build without colliding with the release pipeline's `v*` tags.
+  push:
+    tags:
+      - 'win-*'
+
+permissions:
+  contents: read
+
+# Cancel an in-progress build for the same ref when a new one starts.
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Build Windows installer (${{ github.event.inputs.arch || 'x64' }})
+    runs-on: windows-latest
+    env:
+      ARCH: ${{ github.event.inputs.arch || 'x64' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # windows-latest ships Git Bash (so the `bash scripts/copy-ort-wasm.sh`
+      # postinstall step resolves) and the MSVC + Python toolchain that
+      # electron-rebuild needs to compile the native audio modules
+      # (win-core-audio, naudiodon).
+      - name: Install dependencies
+        run: npm ci
+
+      # Builds the React renderer into build/ AND the Electron main/preload into
+      # dist-electron/ (via vite-plugin-electron). Must run before forge make,
+      # which packages those outputs. CI=false keeps build warnings non-fatal.
+      - name: Build renderer + Electron main
+        run: npm run build
+        env:
+          CI: false
+          VITE_BACKEND_URL: https://sokuji-api.kizuna.ai
+          VITE_ENVIRONMENT: production
+
+      # electron-forge make runs `package` (→ out/Sokuji-win32-<arch>/) then the
+      # Squirrel maker (→ out/make/squirrel.windows/<arch>/*Setup*.exe + .nupkg).
+      # No signing config is set, so no certificate/secret is required.
+      - name: Package + make Windows installer
+        run: npx electron-forge make --arch=$env:ARCH
+
+      - name: List build output
+        if: always()
+        shell: bash
+        run: |
+          echo "=== out/make ==="
+          find out/make -type f 2>/dev/null || true
+          echo "=== portable app dir ==="
+          ls -la "out/Sokuji-win32-${ARCH}" 2>/dev/null || true
+
+      - name: Upload installer (Setup.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sokuji-windows-${{ env.ARCH }}-installer
+          path: out/make/squirrel.windows/${{ env.ARCH }}/*Setup*.exe
+          if-no-files-found: error
+
+      - name: Upload portable app (run sokuji.exe directly)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sokuji-windows-${{ env.ARCH }}-portable
+          path: out/Sokuji-win32-${{ env.ARCH }}/**
+          if-no-files-found: warn
