@@ -455,6 +455,12 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
       return null;
     }
 
+    // When Gemini uses the ElevenLabs output engine, the native Gemini voice is
+    // unused (the ElevenLabs voice is configured in its own section instead).
+    if (provider === Provider.GEMINI && geminiSettings.audioOutputEngine === 'elevenlabs') {
+      return null;
+    }
+
     return (
       <div className="settings-section voice-settings-section" id="voice-settings-section">
         <h2>
@@ -1255,6 +1261,108 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
                 className="slider"
                 disabled={isSessionActive}
               />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderGeminiAudioEngineSettings = () => {
+    if (provider !== Provider.GEMINI) {
+      return null;
+    }
+
+    const isElevenLabs = geminiSettings.audioOutputEngine === 'elevenlabs';
+    const elevenLabsModels = [
+      { value: 'eleven_flash_v2_5', label: t('settings.elevenLabsModelFlash', 'Flash v2.5 (fastest)') },
+      { value: 'eleven_turbo_v2_5', label: t('settings.elevenLabsModelTurbo', 'Turbo v2.5') },
+      { value: 'eleven_multilingual_v2', label: t('settings.elevenLabsModelMultilingual', 'Multilingual v2 (highest quality)') },
+    ];
+
+    return (
+      <div className="settings-section" id="gemini-audio-engine-section">
+        <h2>
+          {t('settings.audioOutputEngine', 'Voice Output Engine')}
+          <Tooltip
+            content={t('settings.audioOutputEngineTooltip', 'Choose how translated speech is synthesized. Gemini uses its native voice. ElevenLabs keeps Gemini as the translator but generates the audio with ElevenLabs TTS.')}
+            position="top"
+          >
+            <CircleHelp className="tooltip-trigger" size={14} style={{ marginLeft: '8px' }} />
+          </Tooltip>
+        </h2>
+        <div className="setting-item">
+          <div className="turn-detection-options">
+            <button
+              className={`option-button ${!isElevenLabs ? 'active' : ''}`}
+              onClick={() => updateGeminiSettings({ audioOutputEngine: 'gemini' })}
+              disabled={isSessionActive}
+            >
+              {t('settings.audioEngineGemini', 'Gemini (native)')}
+            </button>
+            <button
+              className={`option-button ${isElevenLabs ? 'active' : ''}`}
+              onClick={() => updateGeminiSettings({ audioOutputEngine: 'elevenlabs' })}
+              disabled={isSessionActive}
+            >
+              {t('settings.audioEngineElevenLabs', 'ElevenLabs')}
+            </button>
+          </div>
+        </div>
+
+        {isElevenLabs && (
+          <>
+            <div className="setting-item">
+              <div className="setting-label">
+                <span>{t('settings.elevenLabsApiKey', 'ElevenLabs API Key')}</span>
+              </div>
+              <input
+                type="password"
+                className="text-input"
+                value={geminiSettings.elevenLabsApiKey}
+                onChange={(e) => updateGeminiSettings({ elevenLabsApiKey: e.target.value })}
+                disabled={isSessionActive}
+                placeholder="sk_..."
+                autoComplete="off"
+              />
+            </div>
+            <div className="setting-item">
+              <div className="setting-label">
+                <span>{t('settings.elevenLabsVoiceId', 'ElevenLabs Voice ID')}</span>
+                <Tooltip
+                  content={t('settings.elevenLabsVoiceIdTooltip', 'The voice id from your ElevenLabs voice library. The voice is language-agnostic — the spoken language follows the translated text.')}
+                  position="top"
+                >
+                  <CircleHelp className="tooltip-trigger" size={14} style={{ marginLeft: '8px' }} />
+                </Tooltip>
+              </div>
+              <input
+                type="text"
+                className="text-input"
+                value={geminiSettings.elevenLabsVoiceId}
+                onChange={(e) => updateGeminiSettings({ elevenLabsVoiceId: e.target.value })}
+                disabled={isSessionActive}
+                placeholder="21m00Tcm4TlvDq8ikWAM"
+                autoComplete="off"
+              />
+            </div>
+            <div className="setting-item">
+              <div className="setting-label">
+                <span>{t('settings.elevenLabsModel', 'ElevenLabs Model')}</span>
+              </div>
+              <select
+                className="select-dropdown"
+                value={geminiSettings.elevenLabsModelId}
+                onChange={(e) => updateGeminiSettings({ elevenLabsModelId: e.target.value })}
+                disabled={isSessionActive}
+              >
+                {elevenLabsModels.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="setting-item" style={{ fontSize: '12px', color: '#888' }}>
+              {t('settings.elevenLabsNote', 'Translation is still performed by Gemini. ElevenLabs only synthesizes the translated text into speech, which adds a small amount of latency compared to Gemini\'s native voice.')}
             </div>
           </>
         )}
@@ -2415,6 +2523,7 @@ const ProviderSpecificSettings: React.FC<ProviderSpecificSettingsProps> = ({
       {renderModelConfigurationSettings()}
       {renderReasoningEffortSettings()}
       {renderGeminiVadSettings()}
+      {renderGeminiAudioEngineSettings()}
       {renderPalabraAISettings()}
       {renderVolcengineSTSettings()}
       {renderVolcengineAST2Settings()}

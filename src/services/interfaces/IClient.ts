@@ -116,6 +116,24 @@ export interface GeminiSessionConfig extends BaseSessionConfig {
   vadEndSensitivity: 'high' | 'low';
   vadSilenceDurationMs: number;
   vadPrefixPaddingMs: number;
+  /**
+   * Voice output engine. 'gemini' (default) uses Gemini's native audio;
+   * 'elevenlabs' routes Gemini's translated text (text-only mode) through
+   * ElevenLabs TTS instead. Handled by GeminiElevenLabsClient.
+   */
+  audioOutputEngine?: 'gemini' | 'elevenlabs';
+  /** ElevenLabs API key — required when audioOutputEngine === 'elevenlabs'. */
+  elevenLabsApiKey?: string;
+  /** ElevenLabs voice id — required when audioOutputEngine === 'elevenlabs'. */
+  elevenLabsVoiceId?: string;
+  /** ElevenLabs model id (default: 'eleven_flash_v2_5'). */
+  elevenLabsModelId?: string;
+  /**
+   * Target language code (e.g. 'ja-JP'). UI/TTS hint only — not forwarded to
+   * the Gemini API (translation direction lives in `instructions`). Used as the
+   * locale for sentence splitting on the ElevenLabs path.
+   */
+  targetLanguage?: string;
 }
 
 /**

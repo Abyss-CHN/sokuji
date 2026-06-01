@@ -4,7 +4,7 @@ import { OpenAIGAClient } from './OpenAIGAClient';
 import { OpenAIWebRTCClient } from './OpenAIWebRTCClient';
 import { OpenAITranslateGAClient } from './OpenAITranslateGAClient';
 import { OpenAITranslateWebRTCClient } from './OpenAITranslateWebRTCClient';
-import { GeminiClient } from './GeminiClient';
+import { GeminiElevenLabsClient } from './GeminiElevenLabsClient';
 import { PalabraAIClient } from './PalabraAIClient';
 import { VolcengineSTClient } from './VolcengineSTClient';
 import { VolcengineAST2Client } from './VolcengineAST2Client';
@@ -99,7 +99,12 @@ export class ClientFactory {
         return new OpenAIClient(apiKey, customEndpoint);
 
       case Provider.GEMINI:
-        return new GeminiClient(apiKey);
+        // Always wrapped in GeminiElevenLabsClient. The wrapper is a transparent
+        // pass-through unless the session config selects the ElevenLabs voice
+        // output engine, in which case it runs Gemini text-only and synthesizes
+        // speech via ElevenLabs TTS. Static key validation still targets
+        // GeminiClient directly (see ClientOperations), so it is unaffected.
+        return new GeminiElevenLabsClient(apiKey);
 
       case Provider.PALABRA_AI:
         if (!clientSecret) {

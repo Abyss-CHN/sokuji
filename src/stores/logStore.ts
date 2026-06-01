@@ -112,7 +112,9 @@ export interface EventData {
     | 'local.init.translation.error'
     | 'local.init.tts.start'
     | 'local.init.tts.ready'
-    | 'local.init.tts.error';
+    | 'local.init.tts.error'
+    // ElevenLabs TTS (Gemini + ElevenLabs voice output engine)
+    | 'elevenlabs.tts.error';
   data: any;
   // Support additional properties for flexible event handling (e.g., OpenAI properties)
   [key: string]: any;

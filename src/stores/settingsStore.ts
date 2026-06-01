@@ -112,6 +112,12 @@ export interface GeminiSettings {
   vadEndSensitivity: 'high' | 'low';
   vadSilenceDurationMs: number;
   vadPrefixPaddingMs: number;
+  // Voice output engine: 'gemini' (native audio) or 'elevenlabs' (Gemini
+  // translates as text, ElevenLabs synthesizes the speech).
+  audioOutputEngine: 'gemini' | 'elevenlabs';
+  elevenLabsApiKey: string;
+  elevenLabsVoiceId: string;
+  elevenLabsModelId: string;
 }
 
 // PalabraAI Settings
@@ -294,6 +300,10 @@ const defaultGeminiSettings: GeminiSettings = {
   vadEndSensitivity: 'high',
   vadSilenceDurationMs: 500,
   vadPrefixPaddingMs: 300,
+  audioOutputEngine: 'gemini',
+  elevenLabsApiKey: '',
+  elevenLabsVoiceId: '',
+  elevenLabsModelId: 'eleven_flash_v2_5',
 };
 
 const defaultPalabraAISettings: PalabraAISettings = {
@@ -557,6 +567,11 @@ function createGeminiSessionConfig(
     vadEndSensitivity: settings.vadEndSensitivity,
     vadSilenceDurationMs: settings.vadSilenceDurationMs,
     vadPrefixPaddingMs: settings.vadPrefixPaddingMs,
+    audioOutputEngine: settings.audioOutputEngine,
+    elevenLabsApiKey: settings.elevenLabsApiKey,
+    elevenLabsVoiceId: settings.elevenLabsVoiceId,
+    elevenLabsModelId: settings.elevenLabsModelId,
+    targetLanguage: settings.targetLanguage,
   };
 }
 
