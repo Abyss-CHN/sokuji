@@ -1,16 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Shared mock state, hoisted so the vi.mock factories below can close over it.
-const h = vi.hoisted(() => ({
-  lastInnerHandlers: null as any,
-  lastConnectConfig: null as any,
-  innerDisconnect: vi.fn(async () => {}),
-  innerReset: vi.fn(),
-  ttsConstructArgs: [] as any[],
-  synthesize: vi.fn(async (_text: string, onAudio: (pcm: Int16Array) => void) => {
-    onAudio(new Int16Array([1, 2, 3]));
-  }),
-}));
+const h = vi.hoisted(() => {
+  class ElevenLabsTTSError extends Error {
+    status?: number;
+    constructor(message: string, status?: number) {
+      super(message);
+      this.name = 'ElevenLabsTTSError';
+      this.status = status;
+    }
+  }
+  return {
+    lastInnerHandlers: null as any,
+    lastConnectConfig: null as any,
+    innerDisconnect: vi.fn(async () => {}),
+    innerReset: vi.fn(),
+    ttsConstructArgs: [] as any[],
+    synthesize: vi.fn(async (_text: string, onAudio: (pcm: Int16Array) => void) => {
+      onAudio(new Int16Array([1, 2, 3]));
+    }),
+    ElevenLabsTTSError,
+  };
+});
 
 vi.mock('./GeminiClient', () => ({
   GeminiClient: class {
@@ -37,6 +48,7 @@ vi.mock('../../lib/elevenlabs/ElevenLabsTTS', () => ({
     constructor(opts: any) { h.ttsConstructArgs.push(opts); }
     synthesize = h.synthesize;
   },
+  ElevenLabsTTSError: h.ElevenLabsTTSError,
 }));
 
 import { GeminiElevenLabsClient } from './GeminiElevenLabsClient';
@@ -209,6 +221,28 @@ describe('GeminiElevenLabsClient', () => {
       h.lastInnerHandlers.onConversationUpdated({ item: assistantItem('a2', 'New turn.', 'completed') });
       await waitFor(() => h.synthesize.mock.calls.length === 2);
       expect(h.synthesize.mock.calls[1][0]).toBe('New turn.');
+    });
+
+    it('surfaces ONE clear error and stops further TTS on a non-transient failure (402)', async () => {
+      const { client, outer } = makeClient();
+      await client.connect(elevenConfig);
+      h.synthesize.mockRejectedValue(new h.ElevenLabsTTSError('payment required', 402));
+
+      h.lastInnerHandlers.onConversationUpdated({ item: assistantItem('a1', 'Hello there.', 'completed') });
+      await waitFor(() => outer.onError.mock.calls.length === 1);
+
+      // Clear, actionable message mentioning the plan/upgrade.
+      expect(outer.onError.mock.calls[0][0].message).toMatch(/plan|upgrade|Gemini \(native\)/i);
+
+      const synthCallsAfterFirst = h.synthesize.mock.calls.length;
+
+      // A later turn must NOT re-notify (one per session) and must NOT keep
+      // hitting the API (fatal error disabled TTS).
+      h.lastInnerHandlers.onConversationUpdated({ item: assistantItem('a2', 'Another turn.', 'completed') });
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(outer.onError.mock.calls.length).toBe(1);
+      expect(h.synthesize.mock.calls.length).toBe(synthCallsAfterFirst);
     });
 
     it('disconnect tears down TTS and the inner client', async () => {

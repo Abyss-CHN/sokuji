@@ -32,7 +32,7 @@ import {
 } from '../interfaces/IClient';
 import { Provider, ProviderType } from '../../types/Provider';
 import { splitSentences } from '../../utils/splitSentences';
-import { ElevenLabsTTS } from '../../lib/elevenlabs/ElevenLabsTTS';
+import { ElevenLabsTTS, ElevenLabsTTSError } from '../../lib/elevenlabs/ElevenLabsTTS';
 import { GeminiClient } from './GeminiClient';
 
 interface TtsJob {
@@ -53,6 +53,14 @@ export class GeminiElevenLabsClient implements IClient {
   private readonly ttsQueue: TtsJob[] = [];
   private ttsProcessing = false;
   private ttsAbort: AbortController | null = null;
+  /**
+   * Set after a non-transient TTS failure (bad key / plan / voice). Stops
+   * further synthesis for the rest of the session so we don't hammer the API
+   * (or spam errors) on every subsequent sentence.
+   */
+  private ttsFatal = false;
+  /** Ensures only ONE user-facing error is surfaced per session. */
+  private ttsErrorNotified = false;
 
   constructor(apiKey: string) {
     this.inner = new GeminiClient(apiKey);
@@ -120,6 +128,7 @@ export class GeminiElevenLabsClient implements IClient {
    * times as it streams.
    */
   private maybeSynthesize(item: ConversationItem): void {
+    if (this.ttsFatal) return; // a prior non-transient failure disabled TTS this session
     if (!item || item.role !== 'assistant' || item.type !== 'message') return;
 
     const text = item.formatted?.transcript ?? item.formatted?.text ?? '';
@@ -166,7 +175,7 @@ export class GeminiElevenLabsClient implements IClient {
           );
         } catch (error) {
           if (!abort.signal.aborted) {
-            this.emitTtsError(error);
+            this.handleTtsError(error);
           }
           // Aborted jobs fall through; the queue was cleared by abortTts().
         } finally {
@@ -189,18 +198,61 @@ export class GeminiElevenLabsClient implements IClient {
   private resetTtsState(): void {
     this.abortTts();
     this.ttsProcessing = false;
+    this.ttsFatal = false;
+    this.ttsErrorNotified = false;
   }
 
-  private emitTtsError(error: unknown): void {
-    const message = error instanceof Error ? error.message : String(error);
+  /**
+   * Handle a TTS request failure: always log to the LogsPanel; surface ONE
+   * clear, actionable message to the user (via onError → MainPanel shows it in
+   * the conversation panel); and for non-transient failures, disable TTS for
+   * the rest of the session so we don't spam the API/logs on every sentence.
+   */
+  private handleTtsError(error: unknown): void {
+    const status = error instanceof ElevenLabsTTSError ? error.status : undefined;
+    const detail = error instanceof Error ? error.message : String(error);
     console.error('[Sokuji] [GeminiElevenLabsClient] TTS error:', error);
+
+    // Diagnostics — every failure, for the LogsPanel.
     this.outer.onRealtimeEvent?.({
       source: 'client',
-      event: {
-        type: 'elevenlabs.tts.error',
-        data: { message },
-      },
+      event: { type: 'elevenlabs.tts.error', data: { status, message: detail } },
     });
+
+    // Bad key / plan / voice / request won't recover mid-session — stop trying.
+    const fatal = status !== undefined && [400, 401, 402, 403, 404].includes(status);
+    if (fatal) {
+      this.ttsFatal = true;
+      this.ttsQueue.length = 0;
+    }
+
+    // One user-facing notification per session (every sentence would otherwise
+    // re-fire the same error).
+    if (!this.ttsErrorNotified) {
+      this.ttsErrorNotified = true;
+      this.outer.onError?.({ message: this.userFacingTtsMessage(status, detail) });
+    }
+  }
+
+  /** Map an ElevenLabs failure to a clear, actionable message for the user. */
+  private userFacingTtsMessage(status: number | undefined, detail: string): string {
+    switch (status) {
+      case 401:
+        return 'ElevenLabs TTS failed: invalid API key or insufficient permissions. Check your ElevenLabs API key.';
+      case 402:
+        return 'ElevenLabs TTS failed: your ElevenLabs plan (e.g. Free) cannot synthesize speech via the API. Upgrade to a paid plan, or switch the Voice Output Engine back to "Gemini (native)".';
+      case 403:
+        return 'ElevenLabs TTS failed: this request was denied by your ElevenLabs plan or permissions.';
+      case 404:
+        return 'ElevenLabs TTS failed: voice ID not found. Verify the Voice ID is correct and available to your account.';
+      case 429:
+        return 'ElevenLabs TTS failed: rate limited or character quota exhausted (429).';
+      default:
+        if (status !== undefined && status >= 500) {
+          return `ElevenLabs is temporarily unavailable (${status}). Please try again later.`;
+        }
+        return `ElevenLabs TTS failed${status !== undefined ? ` (${status})` : ''}: ${detail}`;
+    }
   }
 
   // --- IClient pass-through surface ---------------------------------------
