@@ -298,7 +298,19 @@
     "translateSourceParticipantWarning": "Participant translation may not work — your selected source language is not in the 13 supported target languages.",
     "participantSectionHeader": "Participant audio",
     "participantSectionDescriptionElectron": "Translate audio from any application playing on this system.",
-    "participantSectionDescriptionExtension": "Translate audio from the active browser tab. The original audio plays through your system default output."
+    "participantSectionDescriptionExtension": "Translate audio from the active browser tab. The original audio plays through your system default output.",
+    "audioOutputEngine": "Voice Output Engine",
+    "audioOutputEngineTooltip": "Choose how translated speech is synthesized. Gemini uses its native voice. ElevenLabs keeps Gemini as the translator but generates the audio with ElevenLabs TTS.",
+    "audioEngineGemini": "Gemini (native)",
+    "audioEngineElevenLabs": "ElevenLabs",
+    "elevenLabsApiKey": "ElevenLabs API Key",
+    "elevenLabsVoiceId": "ElevenLabs Voice ID",
+    "elevenLabsVoiceIdTooltip": "The voice id from your ElevenLabs voice library. The voice is language-agnostic — the spoken language follows the translated text.",
+    "elevenLabsModel": "ElevenLabs Model",
+    "elevenLabsModelFlash": "Flash v2.5 (fastest)",
+    "elevenLabsModelTurbo": "Turbo v2.5",
+    "elevenLabsModelMultilingual": "Multilingual v2 (highest quality)",
+    "elevenLabsNote": "Translation is still performed by Gemini. ElevenLabs only synthesizes the translated text into speech, which adds a small amount of latency compared to Gemini's native voice."
   },
   "simpleSettings": {
     "autoAuthenticated": "Automatically authenticated via your account",
@@ -701,7 +713,17 @@
     "networkError": "Network connection error",
     "translationFailed": "Translation failed",
     "audioError": "Audio processing error",
-    "gpuOutOfMemory": "GPU out of memory — the selected model is too large for your GPU. Please switch to a smaller model."
+    "gpuOutOfMemory": "GPU out of memory — the selected model is too large for your GPU. Please switch to a smaller model.",
+    "elevenLabsTts": {
+      "invalidKey": "ElevenLabs TTS failed: invalid API key or insufficient permissions. Check your ElevenLabs API key.",
+      "planRequired": "ElevenLabs TTS failed: your ElevenLabs plan (e.g. Free) cannot synthesize speech via the API. Upgrade to a paid plan, or switch the Voice Output Engine back to \"Gemini (native)\".",
+      "denied": "ElevenLabs TTS failed: this request was denied by your ElevenLabs plan or permissions.",
+      "voiceNotFound": "ElevenLabs TTS failed: voice ID not found. Verify the Voice ID is correct and available to your account.",
+      "rateLimited": "ElevenLabs TTS failed: rate limited or character quota exhausted (429).",
+      "serverError": "ElevenLabs is temporarily unavailable ({{status}}). Please try again later.",
+      "generic": "ElevenLabs TTS failed: {{detail}}",
+      "genericWithStatus": "ElevenLabs TTS failed ({{status}}): {{detail}}"
+    }
   },
   "connectionStatus": {
     "disconnected": "Disconnected",

@@ -32,6 +32,7 @@ import {
 } from '../interfaces/IClient';
 import { Provider, ProviderType } from '../../types/Provider';
 import { splitSentences } from '../../utils/splitSentences';
+import i18n from '../../locales';
 import { ElevenLabsTTS, ElevenLabsTTSError } from '../../lib/elevenlabs/ElevenLabsTTS';
 import { GeminiClient } from './GeminiClient';
 
@@ -234,24 +235,26 @@ export class GeminiElevenLabsClient implements IClient {
     }
   }
 
-  /** Map an ElevenLabs failure to a clear, actionable message for the user. */
+  /** Map an ElevenLabs failure to a clear, actionable, localized message. */
   private userFacingTtsMessage(status: number | undefined, detail: string): string {
     switch (status) {
       case 401:
-        return 'ElevenLabs TTS failed: invalid API key or insufficient permissions. Check your ElevenLabs API key.';
+        return i18n.t('errors.elevenLabsTts.invalidKey');
       case 402:
-        return 'ElevenLabs TTS failed: your ElevenLabs plan (e.g. Free) cannot synthesize speech via the API. Upgrade to a paid plan, or switch the Voice Output Engine back to "Gemini (native)".';
+        return i18n.t('errors.elevenLabsTts.planRequired');
       case 403:
-        return 'ElevenLabs TTS failed: this request was denied by your ElevenLabs plan or permissions.';
+        return i18n.t('errors.elevenLabsTts.denied');
       case 404:
-        return 'ElevenLabs TTS failed: voice ID not found. Verify the Voice ID is correct and available to your account.';
+        return i18n.t('errors.elevenLabsTts.voiceNotFound');
       case 429:
-        return 'ElevenLabs TTS failed: rate limited or character quota exhausted (429).';
+        return i18n.t('errors.elevenLabsTts.rateLimited');
       default:
         if (status !== undefined && status >= 500) {
-          return `ElevenLabs is temporarily unavailable (${status}). Please try again later.`;
+          return i18n.t('errors.elevenLabsTts.serverError', { status });
         }
-        return `ElevenLabs TTS failed${status !== undefined ? ` (${status})` : ''}: ${detail}`;
+        return status !== undefined
+          ? i18n.t('errors.elevenLabsTts.genericWithStatus', { status, detail })
+          : i18n.t('errors.elevenLabsTts.generic', { detail });
     }
   }
 

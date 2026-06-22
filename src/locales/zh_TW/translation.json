@@ -423,7 +423,19 @@
     "speechModeAppliesTo": "適用於您的語音。參與者音訊始終使用語意 VAD。",
     "participantSectionHeader": "參與者音訊",
     "participantSectionDescriptionElectron": "翻譯此系統上任何正在播放的應用程式的音訊。",
-    "participantSectionDescriptionExtension": "翻譯當前瀏覽器分頁的音訊。原始音訊透過系統預設輸出播放。"
+    "participantSectionDescriptionExtension": "翻譯當前瀏覽器分頁的音訊。原始音訊透過系統預設輸出播放。",
+    "audioOutputEngine": "語音輸出引擎",
+    "audioOutputEngineTooltip": "選擇翻譯後的語音如何合成。Gemini 使用其原生語音;ElevenLabs 仍由 Gemini 負責翻譯,但改用 ElevenLabs TTS 生成語音。",
+    "audioEngineGemini": "Gemini(原生)",
+    "audioEngineElevenLabs": "ElevenLabs",
+    "elevenLabsApiKey": "ElevenLabs API Key",
+    "elevenLabsVoiceId": "ElevenLabs 音色 ID",
+    "elevenLabsVoiceIdTooltip": "你 ElevenLabs 語音庫中的音色 ID。音色與語言無關——朗讀的語言由翻譯後的文字決定。",
+    "elevenLabsModel": "ElevenLabs 模型",
+    "elevenLabsModelFlash": "Flash v2.5(最快)",
+    "elevenLabsModelTurbo": "Turbo v2.5",
+    "elevenLabsModelMultilingual": "Multilingual v2(品質最高)",
+    "elevenLabsNote": "翻譯仍由 Gemini 完成,ElevenLabs 只負責把譯文合成為語音,相比 Gemini 原生語音會增加少量延遲。"
   },
   "audioPanel": {
     "title": "音訊設定",
@@ -556,7 +568,17 @@
     "networkError": "網路連線錯誤",
     "translationFailed": "翻譯失敗",
     "audioError": "音訊處理錯誤",
-    "gpuOutOfMemory": "GPU記憶體不足 — 所選模型對您的GPU來說太大了，請切換到更小的模型。"
+    "gpuOutOfMemory": "GPU記憶體不足 — 所選模型對您的GPU來說太大了，請切換到更小的模型。",
+    "elevenLabsTts": {
+      "invalidKey": "ElevenLabs 語音合成失敗:API key 無效或權限不足,請檢查你的 ElevenLabs API key。",
+      "planRequired": "ElevenLabs 語音合成失敗:目前 ElevenLabs 方案(如免費版)無法透過 API 合成語音。請升級至付費方案,或將「語音輸出引擎」切回「Gemini(原生)」。",
+      "denied": "ElevenLabs 語音合成失敗:該請求被你的 ElevenLabs 方案或權限拒絕。",
+      "voiceNotFound": "ElevenLabs 語音合成失敗:找不到該音色 ID。請確認 Voice ID 正確且在你的帳號下可用。",
+      "rateLimited": "ElevenLabs 語音合成失敗:請求過於頻繁或字元額度已用盡(429)。",
+      "serverError": "ElevenLabs 服務暫時無法使用({{status}}),請稍後重試。",
+      "generic": "ElevenLabs 語音合成失敗:{{detail}}",
+      "genericWithStatus": "ElevenLabs 語音合成失敗({{status}}):{{detail}}"
+    }
   },
   "audioFeedback": {
     "title": "音訊回饋警告",

@@ -51,6 +51,11 @@ vi.mock('../../lib/elevenlabs/ElevenLabsTTS', () => ({
   ElevenLabsTTSError: h.ElevenLabsTTSError,
 }));
 
+// i18n.t returns the key verbatim so tests assert which message was selected.
+vi.mock('../../locales', () => ({
+  default: { t: (key: string) => key },
+}));
+
 import { GeminiElevenLabsClient } from './GeminiElevenLabsClient';
 
 const baseConfig: any = {
@@ -231,8 +236,8 @@ describe('GeminiElevenLabsClient', () => {
       h.lastInnerHandlers.onConversationUpdated({ item: assistantItem('a1', 'Hello there.', 'completed') });
       await waitFor(() => outer.onError.mock.calls.length === 1);
 
-      // Clear, actionable message mentioning the plan/upgrade.
-      expect(outer.onError.mock.calls[0][0].message).toMatch(/plan|upgrade|Gemini \(native\)/i);
+      // Clear, actionable message selected (i18n key for the 402/plan case).
+      expect(outer.onError.mock.calls[0][0].message).toBe('errors.elevenLabsTts.planRequired');
 
       const synthCallsAfterFirst = h.synthesize.mock.calls.length;
 
