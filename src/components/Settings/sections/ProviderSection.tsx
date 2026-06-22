@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Cpu, Zap, HelpCircle, ChevronDown, ChevronUp, CheckCircle, AlertCircle, ExternalLink, X } from 'lucide-react';
 import { OpenAIIcon, GeminiIcon, PalabraAIIcon, KizunaAIIcon, VolcengineIcon } from '../../Icons/ProviderIcons';
+import GeminiAudioEngineSection from './GeminiAudioEngineSection';
 import { useTranslation, Trans } from 'react-i18next';
 import Tooltip from '../../Tooltip/Tooltip';
 import {
@@ -716,6 +717,11 @@ const ProviderSection: React.FC<ProviderSectionProps> = ({
           )}
         </div>
       )}
+
+      {/* Gemini voice output engine (Gemini native vs ElevenLabs TTS).
+          Self-gates to the Gemini provider; available in both Simple and
+          Advanced settings since ProviderSection is shared. */}
+      <GeminiAudioEngineSection isSessionActive={isSessionActive} />
     </div>
   );
 };
