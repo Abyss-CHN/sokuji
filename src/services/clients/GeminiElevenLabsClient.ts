@@ -132,7 +132,14 @@ export class GeminiElevenLabsClient implements IClient {
     if (this.ttsFatal) return; // a prior non-transient failure disabled TTS this session
     if (!item || item.role !== 'assistant' || item.type !== 'message') return;
 
-    const text = item.formatted?.transcript ?? item.formatted?.text ?? '';
+    // Synthesize ONLY the spoken-output transcription, never formatted.text.
+    // For Gemini native-audio models, `transcript` (outputAudioTranscription)
+    // is the clean translation the model actually speaks, whereas `text`
+    // (modelTurn text parts) can carry the model's thinking / preamble. Those
+    // text parts often arrive BEFORE the transcript, so falling back to them
+    // made ElevenLabs read the "extra prompt words" aloud — native Gemini
+    // never voices them. Transcript-only keeps TTS aligned with native speech.
+    const text = item.formatted?.transcript ?? '';
     if (!text.trim()) return;
 
     const sentences = splitSentences(text, this.targetLocale);

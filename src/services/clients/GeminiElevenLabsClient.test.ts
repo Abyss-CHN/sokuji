@@ -250,6 +250,26 @@ describe('GeminiElevenLabsClient', () => {
       expect(h.synthesize.mock.calls.length).toBe(synthCallsAfterFirst);
     });
 
+    it('never synthesizes formatted.text (model thinking/preamble) — only the transcript', async () => {
+      const { client } = makeClient();
+      await client.connect(elevenConfig);
+
+      // An update carrying only `text` (e.g. the model's thinking that arrives
+      // before the spoken transcription) must NOT be voiced.
+      h.lastInnerHandlers.onConversationUpdated({
+        item: { id: 'a1', role: 'assistant', type: 'message', status: 'in_progress', formatted: { text: 'Let me translate this. The phrase means...' } },
+      });
+      await new Promise((r) => setTimeout(r, 15));
+      expect(h.synthesize).not.toHaveBeenCalled();
+
+      // Once the real transcript arrives, only that clean translation is spoken.
+      h.lastInnerHandlers.onConversationUpdated({
+        item: { id: 'a1', role: 'assistant', type: 'message', status: 'completed', formatted: { transcript: 'Bonjour.', text: 'Let me translate this. The phrase means...' } },
+      });
+      await waitFor(() => h.synthesize.mock.calls.length === 1);
+      expect(h.synthesize.mock.calls[0][0]).toBe('Bonjour.');
+    });
+
     it('disconnect tears down TTS and the inner client', async () => {
       const { client } = makeClient();
       await client.connect(elevenConfig);
